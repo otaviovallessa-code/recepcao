@@ -6,53 +6,56 @@
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        :root { --azul: #0b3c66; --vermelho: #d50000; --laranja: #e67e22; --branco: #ffffff; }
-        body { background-color: var(--azul); color: var(--branco); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; }
-        header { width: 100%; padding: 20px 0; border-bottom: 4px solid var(--vermelho); text-align: center; margin-bottom: 30px; }
-        .badge-sec { background: var(--vermelho); padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; }
-        .form-container { background: var(--branco); padding: 30px; border-radius: 15px; width: 90%; max-width: 600px; color: #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        :root { --azul-governo: #0b3c66; --vermelho-governo: #d50000; --laranja-prioridade: #e67e22; --branco: #ffffff; }
+        body { background-color: var(--azul-governo); color: var(--branco); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        header { width: 100%; padding: 30px 0; border-bottom: 4px solid var(--vermelho-governo); text-align: center; margin-bottom: 40px; background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 100%); }
+        .badge-sec { background-color: var(--vermelho-governo); display: inline-block; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-top: 10px; }
+        .form-container { background: var(--branco); padding: 35px; border-radius: 15px; width: 100%; max-width: 600px; box-shadow: 0 15px 35px rgba(0,0,0,0.4); color: #333; }
         .field-group { display: flex; flex-direction: column; margin-bottom: 15px; }
-        label { font-size: 11px; font-weight: 700; color: var(--azul); text-transform: uppercase; }
-        input[type="text"] { padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; margin-top: 5px; }
-        .radio-section { display: flex; gap: 10px; margin: 15px 0; }
-        .radio-group { flex: 1; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee; }
-        .btn-acao { background: #28a745; color: white; border: none; padding: 18px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; border-radius: 8px; text-transform: uppercase; }
-        .fila-box { background: var(--branco); color: #333; width: 90%; max-width: 850px; margin-top: 30px; padding: 20px; border-radius: 12px; }
-        .fila-item { display: grid; grid-template-columns: 80px 1fr 1fr 80px; border-bottom: 1px solid #eee; padding: 10px; font-size: 14px; }
-        .header-fila { font-weight: bold; background: #f1f4f7; border-bottom: 2px solid var(--azul); }
+        label { font-size: 11px; font-weight: 700; color: var(--azul-governo); margin-bottom: 6px; text-transform: uppercase; }
+        input[type="text"] { width: 100%; padding: 14px; border: 2px solid #e1e1e1; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        .radio-section { display: flex; gap: 15px; margin-bottom: 15px; }
+        .radio-group { flex: 1; background: #f8f9fa; padding: 12px; border-radius: 8px; border: 1px solid #eee; }
+        .btn-acao { background-color: #28a745; color: white; border: none; padding: 20px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; border-radius: 8px; text-transform: uppercase; transition: 0.3s; }
+        .btn-acao:hover { background-color: #218838; transform: translateY(-2px); }
+        .fila-box { background: var(--branco); color: #333; width: 100%; max-width: 900px; padding: 25px; border-radius: 12px; margin-top: 30px; }
+        .fila-item { display: grid; grid-template-columns: 100px 1fr 1fr 100px; border-bottom: 1px solid #eee; padding: 15px; font-size: 15px; }
+        .header-fila { font-weight: bold; background: #f1f4f7; border-bottom: 2px solid var(--azul-governo); }
+        .senha-prio { color: var(--laranja-prioridade); font-weight: 800; }
     </style>
 </head>
 <body>
     <header>
         <h1>GOVERNO DO ESTADO DA BAHIA</h1>
         <h2>COORDENAÇÃO DE PROVIMENTO E MOVIMENTAÇÃO</h2>
-        <div class="badge-sec">SEC - TRIAGEM ONLINE</div>
+        <div class="badge-sec">SEC - TRIAGEM ATENDIMENTO ONLINE</div>
     </header>
 
     <div class="form-container">
-        <div class="field-group"><label>Nome do Requerente</label><input type="text" id="nome"></div>
-        <div style="display:flex; gap:10px;">
-            <div class="field-group" style="flex:1"><label>Matrícula</label><input type="text" id="matricula"></div>
-            <div class="field-group" style="flex:1"><label>Telefone</label><input type="text" id="telefone"></div>
+        <div class="field-group"><label>Nome do Requerente</label><input type="text" id="nome" placeholder="Digite o nome completo"></div>
+        <div style="display:flex; gap:15px;">
+            <div class="field-group" style="flex:1;"><label>Matrícula</label><input type="text" id="matricula" placeholder="00.000.000"></div>
+            <div class="field-group" style="flex:1;"><label>Telefone</label><input type="text" id="telefone" placeholder="(71) 90000-0000"></div>
         </div>
-        <div class="field-group"><label>Assunto</label><input type="text" id="assunto"></div>
+        <div class="field-group"><label>Assunto / Tipo de Atendimento</label><input type="text" id="assunto" placeholder="Ex: Dossiê, Recadastramento"></div>
         
         <div class="radio-section">
-            <div class="radio-group"><label>Vínculo</label><br>
+            <div class="radio-group"><label>Vínculo</label><div style="margin-top:5px; font-size:12px;">
                 <input type="radio" name="tipo" value="EFETIVO" checked> EFETIVO 
                 <input type="radio" name="tipo" value="REDA"> REDA
-            </div>
-            <div class="radio-group"><label>Prioridade?</label><br>
+                <input type="radio" name="tipo" value="INTERNO"> INT.
+            </div></div>
+            <div class="radio-group" style="border: 1px solid #ffeeba;"><label style="color: #856404;">Prioritário?</label><div style="margin-top:5px; font-size:12px;">
                 <input type="radio" name="prio" value="SIM"> SIM 
                 <input type="radio" name="prio" value="NAO" checked> NÃO
-            </div>
+            </div></div>
         </div>
-        <button class="btn-acao" onclick="gerarSenha()">Gerar Senha Online</button>
+        <button class="btn-acao" onclick="gerarSenha()">Gerar Senha de Atendimento</button>
     </div>
 
     <div class="fila-box">
-        <h3 style="color:var(--azul)">Fila de Espera em Tempo Real</h3>
-        <div id="fila-espera"></div>
+        <div style="font-weight:bold; color:var(--azul-governo); border-left:5px solid var(--vermelho-governo); padding-left:15px; margin-bottom:15px;">Fila em Tempo Real (Nuvem)</div>
+        <div id="fila-display"></div>
     </div>
 
     <script>
@@ -61,33 +64,39 @@
         const db = firebase.database();
 
         function gerarSenha() {
-            const nome = document.getElementById('nome').value.toUpperCase();
-            if(!nome) return alert("Nome obrigatório!");
+            const nome = document.getElementById('nome').value.trim().toUpperCase();
+            if(!nome) return alert("Informe o nome!");
             const tipo = document.querySelector('input[name="tipo"]:checked').value;
             const ehPrio = document.querySelector('input[name="prio"]:checked').value === "SIM";
 
             db.ref('atendimentos').once('value', snap => {
-                const num = snap.numChildren() + 1;
-                const senha = (ehPrio ? "P" : tipo[0]) + String(num).padStart(3, '0');
-                
+                const total = snap.numChildren() + 1;
+                const prefixo = ehPrio ? "P" : (tipo === "INTERNO" ? "I" : tipo[0]);
+                const senha = prefixo + String(total).padStart(3, '0');
+
                 db.ref('atendimentos').push({
                     senha, nome, tipo, prioridade: ehPrio,
                     matricula: document.getElementById('matricula').value || "---",
                     assunto: document.getElementById('assunto').value.toUpperCase() || "GERAL",
-                    status: "AGUARDANDO", timestamp: Date.now()
+                    status: "AGUARDANDO", timestamp: Date.now(),
+                    hora: new Date().toLocaleTimeString()
                 });
                 document.getElementById('nome').value = "";
+                document.getElementById('nome').focus();
             });
         }
 
         db.ref('atendimentos').on('value', snap => {
-            let html = '<div class="fila-item header-fila"><span>Senha</span><span>Nome</span><span>Assunto</span><span>Status</span></div>';
+            let html = '<div class="fila-item header-fila"><span>Senha</span><span>Nome</span><span>Assunto</span><span>Hora</span></div>';
+            let cont = 0;
             snap.forEach(c => {
                 const p = c.val();
-                if(p.status === "AGUARDANDO")
-                    html += `<div class="fila-item"><b>${p.senha}</b><span>${p.nome}</span><span>${p.assunto}</span><span>${p.status}</span></div>`;
+                if(p.status === "AGUARDANDO") {
+                    html += `<div class="fila-item"><b class="${p.prioridade ? 'senha-prio' : ''}">${p.senha}</b><span>${p.nome}</span><span>${p.assunto}</span><span>${p.hora}</span></div>`;
+                    cont++;
+                }
             });
-            document.getElementById('fila-espera').innerHTML = html;
+            document.getElementById('fila-display').innerHTML = cont > 0 ? html : "Ninguém aguardando.";
         });
     </script>
 </body>

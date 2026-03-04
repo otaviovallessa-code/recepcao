@@ -2,34 +2,54 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Atendimento CPM Online</title>
+    <title>SEC - Atendimento CPM (Chamada)</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { background: #0b3c66; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
-        .box { background: rgba(255,255,255,0.1); padding: 30px; border-radius: 10px; width: 500px; margin: auto; border: 1px solid #444; }
-        .status { font-size: 35px; color: #ff0000; font-weight: bold; margin: 20px 0; }
-        .btn { width: 100%; padding: 15px; margin: 5px 0; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 16px; }
-        .btn-call { background: #d50000; color: white; }
-        .btn-excel { background: #28a745; color: white; margin-top: 20px; }
-        .fila-lista { background: white; color: #333; margin-top: 30px; border-radius: 8px; padding: 10px; text-align: left; }
+        body { background-color: #0b3c66; color: white; font-family: Arial, sans-serif; text-align: center; padding: 20px; margin: 0; }
+        .container { background: rgba(255, 255, 255, 0.1); padding: 25px; border-radius: 12px; width: 550px; margin: 0 auto; border: 1px solid rgba(255,255,255,0.2); }
+        .status-grande { font-size: 45px; color: #ff0000; font-weight: bold; margin: 20px 0; min-height: 60px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+        .btn-acao { background-color: #d50000; color: white; border: none; padding: 18px; font-size: 20px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; border-radius: 6px; text-transform: uppercase; transition: 0.3s; }
+        .btn-interno { background-color: #0056b3; margin-top: 10px; }
+        .btn-acao:hover { transform: scale(1.02); filter: brightness(1.2); }
+        
+        /* ALERTA DE PRIORIDADE PISCANTE */
+        #alerta-prioridade { 
+            background: #ffc107; color: #000; padding: 15px; border-radius: 8px; font-weight: bold; 
+            margin-bottom: 20px; display: none; animation: piscar 1s infinite; 
+        }
+        @keyframes piscar { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+        .fila-box { background: white; color: #333; width: 95%; max-width: 800px; margin: 30px auto; padding: 15px; border-radius: 8px; text-align: left; }
+        .badge-turno { display: block; margin-top: 15px; font-size: 13px; opacity: 0.8; font-style: italic; }
     </style>
 </head>
 <body>
-    <h1>ATENDIMENTO CPM</h1>
-    <div class="box">
-        <div id="display" class="status">AGUARDANDO...</div>
-        <button class="btn btn-call" onclick="chamarProximo()">CHAMAR PRÓXIMO</button>
-        <button class="btn btn-excel" onclick="baixarExcel()">📊 BAIXAR RELATÓRIO DO DIA</button>
+    <h1>GOVERNO DO ESTADO DA BAHIA</h1>
+    <h2>SEC - ATENDIMENTO CPM (CHAMADA ONLINE)</h2>
+
+    <div class="container">
+        <div id="alerta-prioridade">⚠️ ATENÇÃO: EXISTE PRIORIDADE NA FILA!</div>
+        <div id="display-chamada" class="status-grande">AGUARDANDO...</div>
+        
+        <button class="btn-acao" onclick="chamarAlternado()">CHAMAR PRÓXIMO (EFETIVO/REDA)</button>
+        <button class="btn-acao btn-interno" onclick="chamarInterno()">CHAMAR INTERNO</button>
+        
+        <span id="txt-turno" class="badge-turno">Turno: EFETIVO</span>
     </div>
-    <div class="fila-lista" id="fila"></div>
+
+    <div class="fila-box">
+        <h3 style="color:#0b3c66; margin-top:0">Fila de Espera:</h3>
+        <div id="lista-fila"></div>
+    </div>
 
     <script>
         const firebaseConfig = { databaseURL: "https://sistemacpm-dd706-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+
         let fila = [];
+        let proximoEhEfetivo = true;
 
         db.ref('atendimentos').on('value', snap => {
             fila = [];
@@ -37,30 +57,60 @@
                 const item = c.val(); item.key = c.key;
                 if(item.status === "AGUARDANDO") fila.push(item);
             });
-            fila.sort((a,b) => (a.prioridade === b.prioridade) ? a.timestamp - b.timestamp : (a.prioridade ? -1 : 1));
-            
-            let html = "<b>FILA ATUAL:</b><br>";
-            fila.forEach(f => html += `${f.senha} - ${f.nome}<br>`);
-            document.getElementById('fila').innerHTML = html;
+
+            // Verifica se há prioridade para mostrar o alerta
+            const temPrio = fila.some(i => i.prioridade);
+            document.getElementById('alerta-prioridade').style.display = temPrio ? 'block' : 'none';
+
+            // Atualiza lista visual
+            let h = "";
+            fila.forEach(f => h += `<div><b>${f.senha}</b> - ${f.nome} (${f.tipo})</div>`);
+            document.getElementById('lista-fila').innerHTML = h || "Fila vazia.";
         });
 
-        function chamarProximo() {
-            if(fila.length === 0) return alert("Fila Vazia");
-            const s = fila[0];
-            db.ref('atendimentos/' + s.key).update({ status: "ATENDIDO", horaChamada: new Date().toLocaleTimeString() });
-            db.ref('senha_atual').set({ senha: s.senha, nome: s.nome, assunto: s.assunto, timestamp: Date.now() });
-            document.getElementById('display').innerText = s.senha;
+        function chamarAlternado() {
+            if (fila.length === 0) return alert("Ninguém na fila!");
+
+            // 1. PRIORIDADE SEMPRE PRIMEIRO
+            const prios = fila.filter(i => i.prioridade).sort((a,b) => a.timestamp - b.timestamp);
+            let escolhido = null;
+
+            if (prios.length > 0) {
+                escolhido = prios[0];
+            } else {
+                // 2. ALTERNÂNCIA EFETIVO / REDA
+                const efetivos = fila.filter(i => i.tipo === "EFETIVO").sort((a,b) => a.timestamp - b.timestamp);
+                const redas = fila.filter(i => i.tipo === "REDA").sort((a,b) => a.timestamp - b.timestamp);
+
+                if (proximoEhEfetivo) {
+                    escolhido = efetivos[0] || redas[0];
+                } else {
+                    escolhido = redas[0] || efetivos[0];
+                }
+
+                // Só alterna se ambos existirem, para não pular vez injustamente
+                if (efetivos.length > 0 && redas.length > 0) {
+                    proximoEhEfetivo = !proximoEhEfetivo;
+                    document.getElementById('txt-turno').innerText = "Turno: " + (proximoEhEfetivo ? "EFETIVO" : "REDA");
+                }
+            }
+
+            if (escolhido) dispararChamada(escolhido);
         }
 
-        function baixarExcel() {
-            db.ref('atendimentos').once('value', snap => {
-                const dados = [];
-                snap.forEach(c => dados.push(c.val()));
-                const ws = XLSX.utils.json_to_sheet(dados);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "Atendimentos");
-                XLSX.writeFile(wb, "Relatorio_CPM.xlsx");
+        function chamarInterno() {
+            const interno = fila.find(i => i.tipo === "INTERNO");
+            if (interno) dispararChamada(interno);
+            else alert("Nenhum atendimento INTERNO na fila.");
+        }
+
+        function dispararChamada(item) {
+            db.ref('atendimentos/' + item.key).update({ status: "CHAMADO" });
+            db.ref('senha_atual').set({ 
+                senha: item.senha, nome: item.nome, 
+                assunto: item.assunto, timestamp: Date.now() 
             });
+            document.getElementById('display-chamada').innerText = item.senha + " - " + item.nome;
         }
     </script>
 </body>
