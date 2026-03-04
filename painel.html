@@ -9,34 +9,38 @@
         body { background: #0b3c66; color: white; font-family: Arial; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         .header { display: flex; justify-content: space-between; padding: 15px 30px; background: rgba(0,0,0,0.3); border-bottom: 3px solid #ff0000; font-size: 24px; }
         .main { display: grid; grid-template-columns: 3fr 1fr; flex-grow: 1; }
-        .chamada { display: flex; flex-direction: column; justify-content: center; align-items: center; border-right: 5px solid #ff0000; }
-        .senha { font-size: 200px; font-weight: bold; color: #ff0000; margin: 0; }
-        .nome { font-size: 60px; text-transform: uppercase; }
-        .historico { background: #092d4d; padding: 20px; }
+        .chamada { display: flex; flex-direction: column; justify-content: center; align-items: center; border-right: 5px solid #ff0000; text-align: center; }
+        .senha { font-size: 200px; font-weight: bold; color: #ff0000; margin: 0; line-height: 1; }
+        .nome { font-size: 60px; text-transform: uppercase; margin-top: 10px; padding: 0 20px; }
+        .historico { background: #092d4d; padding: 20px; overflow: hidden; }
         .marquee { background: #000; color: #ffeb3b; padding: 15px; font-size: 24px; font-weight: bold; white-space: nowrap; overflow: hidden; border-top: 3px solid #ff0000; }
-        .scroll { display: inline-block; animation: scroll 30s linear infinite; }
-        @keyframes scroll { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
+        .scroll { display: inline-block; padding-left: 100%; animation: scroll 40s linear infinite; }
+        @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+        #assunto { font-size: 35px; background: #d50000; padding: 15px 50px; border-radius: 50px; margin-top: 30px; font-weight: bold; text-transform: uppercase; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
     <div class="header">
-        <div>SISTEMA CPM - BAHIA</div>
+        <div>SISTEMA CPM - GOVERNO DA BAHIA</div>
         <div id="relogio">00:00:00</div>
     </div>
     <div class="main">
         <div class="chamada">
-            <div style="font-size:40px">SENHA</div>
+            <div style="font-size:45px; letter-spacing: 5px;">SENHA</div>
             <div id="senha" class="senha">---</div>
             <div id="nome" class="nome">Aguardando...</div>
-            <div id="assunto" style="font-size:30px; background:#d50000; padding:10px 40px; border-radius:50px; margin-top:20px">SECRETARIA DA EDUCAÇÃO</div>
+            <div id="assunto">Sincronizando...</div>
         </div>
         <div class="historico">
-            <h2 style="border-bottom:2px solid #ff0000">ÚLTIMAS</h2>
+            <h2 style="border-bottom:2px solid #ff0000; font-size: 30px; margin-top: 0;">ÚLTIMAS</h2>
             <div id="lista-hist"></div>
         </div>
     </div>
     <div class="marquee"><div id="letreiro" class="scroll">Carregando notícias da Educação Bahia...</div></div>
-    <audio id="som"><source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+    
+    <audio id="som-alerta" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+    </audio>
 
     <script>
         const firebaseConfig = { databaseURL: "https://sistemacpm-dd706-default-rtdb.firebaseio.com/" };
@@ -44,34 +48,70 @@
         const db = firebase.database();
         let lastTs = 0;
 
-        // Atualiza Senha e Voz
         db.ref('senha_atual').on('value', snap => {
             const d = snap.val();
             if(d && d.timestamp !== lastTs) {
+                // 1. Atualiza a Interface
                 document.getElementById('senha').innerText = d.senha;
                 document.getElementById('nome').innerText = d.nome;
                 document.getElementById('assunto').innerText = d.assunto;
-                document.getElementById('som').play();
-                const v = new SpeechSynthesisUtterance(`Senha ${d.senha}. ${d.nome}`);
-                v.lang = 'pt-BR'; window.speechSynthesis.speak(v);
                 
-                const item = `<div style="font-size:25px; margin-bottom:15px"><b style="color:#ff0000">${d.senha}</b><br>${d.nome.split(' ')[0]}</div>`;
-                document.getElementById('lista-hist').innerHTML = item + document.getElementById('lista-hist').innerHTML;
+                // 2. Tocar Som e depois Falar
+                const audio = document.getElementById('som-alerta');
+                audio.play().then(() => {
+                    // Espera 1 segundo para o som tocar e então inicia a voz
+                    setTimeout(() => {
+                        falarSenha(d.senha, d.nome, d.assunto);
+                    }, 1200);
+                }).catch(e => console.log("Aguardando interação do usuário para áudio."));
+
+                // 3. Atualiza Histórico Lateral
+                const item = `<div style="font-size:28px; margin-bottom:20px; border-bottom:1px solid #1a4a75; padding-bottom:10px;">
+                                <b style="color:#ff0000; font-size:35px">${d.senha}</b><br>
+                                <span style="font-size:18px">${d.nome.split(' ')[0]} ${d.nome.split(' ').slice(-1)}</span>
+                              </div>`;
+                const lista = document.getElementById('lista-hist');
+                lista.innerHTML = item + lista.innerHTML;
+                if(lista.children.length > 6) lista.removeChild(lista.lastChild);
+
                 lastTs = d.timestamp;
             }
         });
 
-        // Relógio e Notícias RSS
-        setInterval(() => document.getElementById('relogio').innerText = new Date().toLocaleTimeString(), 1000);
+        function falarSenha(senha, nome, assunto) {
+            // Cancela falas anteriores para não encavalar
+            window.speechSynthesis.cancel();
+
+            const texto = `Senha ${senha.split('').join(' ')}. ${nome}. Assunto: ${assunto}`;
+            const msg = new SpeechSynthesisUtterance(texto);
+            msg.lang = 'pt-BR';
+            msg.rate = 0.9; // Velocidade um pouco mais lenta para clareza
+            msg.pitch = 1;
+            window.speechSynthesis.speak(msg);
+        }
+
+        // Relógio
+        setInterval(() => {
+            document.getElementById('relogio').innerText = new Date().toLocaleTimeString('pt-br');
+        }, 1000);
         
+        // Notícias RSS
         async function getNoticias() {
             try {
                 const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https://www.ba.gov.br/educacao/noticias/rss.xml');
                 const data = await res.json();
                 document.getElementById('letreiro').innerText = data.items.map(i => " ● " + i.title.toUpperCase()).join(' ');
-            } catch { document.getElementById('letreiro').innerText = "CONECTADO AO SERVIDOR CPM - SECRETARIA DA EDUCAÇÃO BAHIA"; }
+            } catch { 
+                document.getElementById('letreiro').innerText = "CPM - COORDENAÇÃO DE PROVIMENTO E MOVIMENTAÇÃO - SECRETARIA DA EDUCAÇÃO BAHIA"; 
+            }
         }
         getNoticias(); setInterval(getNoticias, 600000);
+
+        // IMPORTANTE: Navegadores bloqueiam som automático. 
+        // Clique em qualquer lugar da tela da TV ao ligar para liberar o áudio.
+        document.body.addEventListener('click', () => {
+            console.log("Áudio desbloqueado");
+        }, {once: true});
     </script>
 </body>
 </html>
