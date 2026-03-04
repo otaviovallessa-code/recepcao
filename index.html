@@ -2,54 +2,44 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>CPM - Triagem Governamental</title>
+    <title>CPM - Triagem Online</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        :root { --azul-governo: #0b3c66; --vermelho-governo: #d50000; --branco: #ffffff; }
-        body { background-color: var(--azul-governo); color: var(--branco); font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; }
-        header { width: 100%; padding: 20px 0; border-bottom: 4px solid var(--vermelho-governo); text-align: center; background: rgba(0,0,0,0.1); }
-        .form-container { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; color: #333; margin-top: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .field-group { display: flex; flex-direction: column; margin-bottom: 15px; }
-        label { font-size: 11px; font-weight: bold; color: var(--azul-governo); margin-bottom: 5px; }
-        input { padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px; }
-        .btn-acao { background: #28a745; color: white; border: none; padding: 15px; width: 100%; font-weight: bold; cursor: pointer; border-radius: 6px; font-size: 16px; }
-        .fila-box { width: 90%; max-width: 800px; background: white; color: #333; margin: 20px 0; padding: 15px; border-radius: 10px; }
+        :root { --azul: #0b3c66; --vermelho: #d50000; }
+        body { background: var(--azul); color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; }
+        header { width: 100%; padding: 20px 0; border-bottom: 4px solid var(--vermelho); text-align: center; }
+        .container { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; color: #333; margin-top: 20px; }
+        .field { display: flex; flex-direction: column; margin-bottom: 15px; }
+        input, select { padding: 12px; border: 2px solid #ddd; border-radius: 6px; }
+        .btn { background: #28a745; color: white; border: none; padding: 15px; width: 100%; font-weight: bold; cursor: pointer; border-radius: 6px; }
+        .fila { width: 90%; max-width: 800px; background: white; color: #333; margin-top: 20px; padding: 15px; border-radius: 10px; }
         .item { display: grid; grid-template-columns: 80px 1fr 1fr; border-bottom: 1px solid #eee; padding: 10px; }
     </style>
 </head>
 <body>
-    <header>
-        <h1>GOVERNO DA BAHIA</h1>
-        <h3>TRIAGEM ONLINE - CPM</h3>
-    </header>
-
-    <div class="form-container">
-        <div class="field-group"><label>NOME</label><input type="text" id="nome"></div>
-        <div class="field-group"><label>VÍNCULO</label>
-            <select id="tipo" style="padding: 10px; border-radius: 6px;">
+    <header><h1>TRIAGEM ONLINE - CPM</h1></header>
+    <div class="container">
+        <div class="field"><label>NOME</label><input type="text" id="nome"></div>
+        <div class="field"><label>VÍNCULO</label>
+            <select id="tipo">
                 <option value="EFETIVO">EFETIVO</option>
                 <option value="REDA">REDA</option>
                 <option value="INTERNO">INTERNO</option>
             </select>
         </div>
-        <div class="field-group"><label>PRIORIDADE?</label>
-            <select id="prioridade" style="padding: 10px; border-radius: 6px;">
-                <option value="NAO">NÃO</option>
-                <option value="SIM">SIM</option>
-            </select>
+        <div class="field"><label>PRIORIDADE?</label>
+            <select id="prioridade"><option value="NAO">NÃO</option><option value="SIM">SIM</option></select>
         </div>
-        <button class="btn-acao" onclick="gerarSenha()">GERAR SENHA</button>
+        <button class="btn" onclick="gerarSenha()">GERAR SENHA</button>
     </div>
-
-    <div class="fila-box">
-        <h4 style="color: var(--azul-governo)">FILA DE ESPERA ATUAL</h4>
+    <div class="fila">
+        <h4>FILA DE ESPERA</h4>
         <div id="lista-espera"></div>
     </div>
 
     <script>
-        const firebaseConfig = { databaseURL: "https://sistemacpm-dd706-default-rtdb.firebaseio.com/"
-};
+        const firebaseConfig = { databaseURL: "https://sistemacpm-dd706-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
@@ -57,32 +47,23 @@
             const nome = document.getElementById('nome').value.toUpperCase();
             const tipo = document.getElementById('tipo').value;
             const ehPrio = document.getElementById('prioridade').value === "SIM";
-            
-            if(!nome) return alert("Preencha o nome!");
+            if(!nome) return alert("Informe o nome!");
 
-            db.ref('atendimentos').once('value', snapshot => {
-                const total = snapshot.numChildren() + 1;
-                const prefixo = ehPrio ? "P" : tipo[0];
-                const senha = prefixo + String(total).padStart(3, '0');
-
+            db.ref('atendimentos').once('value', snap => {
+                const senha = (ehPrio ? "P" : tipo[0]) + String(snap.numChildren() + 1).padStart(3, '0');
                 db.ref('atendimentos').push({
                     senha, nome, tipo, prioridade: ehPrio,
-                    status: "AGUARDANDO",
-                    timestamp: Date.now(),
-                    hora: new Date().toLocaleTimeString()
+                    status: "AGUARDANDO", timestamp: Date.now()
                 });
                 document.getElementById('nome').value = "";
             });
         }
 
-        // Atualiza a listagem local em tempo real
-        db.ref('atendimentos').on('value', snapshot => {
+        db.ref('atendimentos').on('value', snap => {
             let html = "";
-            snapshot.forEach(child => {
+            snap.forEach(child => {
                 const p = child.val();
-                if(p.status === "AGUARDANDO") {
-                    html += `<div class="item"><b>${p.senha}</b><span>${p.nome}</span><span>${p.tipo}</span></div>`;
-                }
+                if(p.status === "AGUARDANDO") html += `<div class="item"><b>${p.senha}</b><span>${p.nome}</span><span>${p.tipo}</span></div>`;
             });
             document.getElementById('lista-espera').innerHTML = html || "Fila vazia";
         });

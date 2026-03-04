@@ -2,77 +2,51 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Controle de Chamada - Online</title>
+    <title>Atendimento Online - CPM</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; text-align: center; }
-        .container { max-width: 600px; margin: 30px auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .btn-chamar { background: #d50000; color: white; border: none; padding: 20px; width: 100%; font-size: 20px; font-weight: bold; cursor: pointer; border-radius: 8px; }
-        .espera-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #ddd; }
-        .prio { color: orange; font-weight: bold; }
+        body { font-family: sans-serif; text-align: center; background: #f4f7f6; }
+        .box { max-width: 500px; margin: 20px auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .btn-call { background: #d50000; color: white; border: none; padding: 20px; width: 100%; font-size: 20px; font-weight: bold; cursor: pointer; border-radius: 8px; }
+        .item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #ddd; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>SISTEMA DE CHAMADA</h2>
-        <div id="proximo" style="font-size: 24px; margin-bottom: 20px; color: #0b3c66;">Próximo da fila: <b id="nome-prox">--</b></div>
-        <button class="btn-chamar" onclick="chamarProximo()">CHAMAR PRÓXIMO</button>
+    <div class="box">
+        <h2>ATENDIMENTO</h2>
+        <div style="font-size: 20px; margin-bottom: 15px;">Próximo: <b id="prox">--</b></div>
+        <button class="btn-call" onclick="chamar()">CHAMAR PRÓXIMO</button>
         <hr>
         <h3>LISTA DE ESPERA</h3>
         <div id="lista"></div>
-        <button onclick="resetarDia()" style="margin-top: 50px; opacity: 0.5;">Resetar Sistema (Novo Dia)</button>
+        <button onclick="if(confirm('Limpar tudo?')) firebase.database().ref().remove()" style="margin-top:30px; opacity:0.3">Resetar Dia</button>
     </div>
 
     <script>
-        const firebaseConfig = { databaseURL: "https://sistemacpm-dd706-default-rtdb.firebaseio.com/"
-};
+        const firebaseConfig = { databaseURL: "https://sistemacpm-dd706-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-
         let fila = [];
 
-        db.ref('atendimentos').on('value', snapshot => {
+        db.ref('atendimentos').on('value', snap => {
             fila = [];
-            snapshot.forEach(child => {
-                const item = child.val();
-                item.key = child.key;
+            snap.forEach(child => {
+                const item = child.val(); item.key = child.key;
                 if(item.status === "AGUARDANDO") fila.push(item);
             });
-
-            // Ordenação: Prioridade primeiro, depois por tempo
             fila.sort((a,b) => (a.prioridade === b.prioridade) ? a.timestamp - b.timestamp : (a.prioridade ? -1 : 1));
-
-            document.getElementById('nome-prox').innerText = fila.length > 0 ? fila[0].senha + " - " + fila[0].nome : "Vazio";
-            
+            document.getElementById('prox').innerText = fila.length > 0 ? fila[0].senha : "--";
             let html = "";
-            fila.forEach(f => {
-                html += `<div class="espera-item"><span>${f.senha}</span><span>${f.nome}</span></div>`;
-            });
+            fila.forEach(f => html += `<div class="item"><span>${f.senha}</span><span>${f.nome}</span></div>`);
             document.getElementById('lista').innerHTML = html;
         });
 
-        function chamarProximo() {
-            if(fila.length === 0) return alert("Ninguém na fila!");
-            const selecionado = fila[0];
-
-            // 1. Atualiza o status do paciente para ATENDIDO
-            db.ref('atendimentos/' + selecionado.key).update({ status: "ATENDIDO" });
-
-            // 2. Envia para o Painel da TV
-            db.ref('senha_atual').set({
-                senha: selecionado.senha,
-                nome: selecionado.nome,
-                hora: new Date().toLocaleTimeString(),
-                timestamp: Date.now()
-            });
-        }
-
-        function resetarDia() {
-            if(confirm("Deseja apagar TUDO?")) {
-                db.ref('atendimentos').remove();
-                db.ref('senha_atual').remove();
-            }
+        function chamar() {
+            if(fila.length === 0) return alert("Fila vazia!");
+            const sel = fila[0];
+            db.ref('atendimentos/' + sel.key).update({ status: "ATENDIDO" });
+            db.ref('senha_atual').set({ senha: sel.senha, nome: sel.nome, timestamp: Date.now() });
         }
     </script>
 </body>
