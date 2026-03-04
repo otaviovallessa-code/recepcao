@@ -1,163 +1,291 @@
-<style>
-    /* Estilo para os Contadores */
-    .dashboard-stats {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 15px;
-        width: 100%;
-        max-width: 900px;
-        margin-bottom: 25px;
-    }
-    .stat-card {
-        background: var(--branco);
-        color: var(--azul-governo);
-        padding: 15px;
-        border-radius: 10px;
-        text-align: center;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        border-bottom: 4px solid var(--vermelho-governo);
-    }
-    .stat-number { font-size: 28px; font-weight: bold; display: block; color: var(--vermelho-governo); }
-    .stat-label { font-size: 11px; text-transform: uppercase; font-weight: 700; opacity: 0.8; }
-</style>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>CPM - Triagem Governamental Online</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <style>
+        :root { 
+            --azul-ba: #0b3c66; 
+            --vermelho-ba: #d50000; 
+            --cinza-fundo: #f4f7f6;
+            --branco: #ffffff; 
+        }
 
-<body>
-    <header>
-        <h1>GOVERNO DO ESTADO DA BAHIA</h1>
-        <h2>COORDENAÇÃO DE PROVIMENTO E MOVIMENTAÇÃO</h2>
-        <div class="badge-sec">SEC - TRIAGEM ATENDIMENTO ONLINE</div>
-    </header>
+        body { 
+            background-color: var(--cinza-fundo); 
+            color: #333; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+        }
 
-    <div class="dashboard-stats">
-        <div class="stat-card"><span id="count-total" class="stat-number">0</span><span class="stat-label">Total Atendidos</span></div>
-        <div class="stat-card"><span id="count-efetivo" class="stat-number">0</span><span class="stat-label">Efetivos</span></div>
-        <div class="stat-card"><span id="count-reda" class="stat-number">0</span><span class="stat-label">REDA</span></div>
-        <div class="stat-card"><span id="count-prio" class="stat-number">0</span><span class="stat-label">Prioridades</span></div>
-        <div class="stat-card"><span id="count-interno" class="stat-number">0</span><span class="stat-label">Internos</span></div>
-    </div>
+        header { 
+            width: 100%; 
+            padding: 20px 0; 
+            background-color: var(--branco);
+            border-bottom: 5px solid var(--vermelho-ba); 
+            text-align: center; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
 
-    <div class="form-container">
-        <div class="field-group"><label>Nome do Requerente</label><input type="text" id="nome" placeholder="Digite o nome completo"></div>
-        <div style="display:flex; gap:15px;">
-            <div class="field-group" style="flex:1;"><label>Matrícula</label><input type="text" id="matricula" placeholder="00.000.000"></div>
-            <div class="field-group" style="flex:1;"><label>Telefone</label><input type="text" id="telefone" placeholder="(71) 90000-0000"></div>
-        </div>
-        <div class="field-group"><label>Assunto / Tipo de Atendimento</label><input type="text" id="assunto" placeholder="Ex: Dossiê, Recadastramento"></div>
+        header h1 { color: var(--azul-ba); margin: 0; font-size: 24px; text-transform: uppercase; }
+        header h2 { color: #555; margin: 5px 0; font-size: 18px; font-weight: 400; }
+        .badge-sec { background: var(--azul-ba); color: white; padding: 5px 15px; border-radius: 4px; font-size: 12px; display: inline-block; margin-top: 10px; }
+
+        /* Dashboard de Contadores */
+        .dashboard-stats {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            width: 95%;
+            max-width: 1000px;
+            margin: 25px 0;
+        }
+
+        .stat-card {
+            background: var(--branco);
+            flex: 1;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-top: 4px solid var(--azul-ba);
+        }
+
+        .stat-number { font-size: 32px; font-weight: bold; color: var(--vermelho-ba); display: block; }
+        .stat-label { font-size: 11px; text-transform: uppercase; color: #666; font-weight: 700; }
+
+        /* Formulário */
+        .form-container { 
+            background: var(--branco); 
+            padding: 30px; 
+            border-radius: 8px; 
+            width: 90%; 
+            max-width: 800px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+        }
+
+        .row { display: flex; gap: 20px; margin-bottom: 15px; }
+        .field-group { flex: 1; display: flex; flex-direction: column; }
         
-        <div class="radio-section">
-            <div class="radio-group"><label>Vínculo</label><div style="margin-top:5px; font-size:12px;">
-                <input type="radio" name="tipo" value="EFETIVO" checked> EFETIVO 
-                <input type="radio" name="tipo" value="REDA"> REDA
-                <input type="radio" name="tipo" value="INTERNO"> INT.
-            </div></div>
-            <div class="radio-group" style="border: 1px solid #ffeeba;"><label style="color: #856404;">Prioritário?</label><div style="margin-top:5px; font-size:12px;">
-                <input type="radio" name="prio" value="SIM"> SIM 
-                <input type="radio" name="prio" value="NAO" checked> NÃO
-            </div></div>
+        label { font-size: 12px; font-weight: bold; color: var(--azul-ba); margin-bottom: 5px; text-transform: uppercase; }
+        
+        input[type="text"] { 
+            padding: 12px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            font-size: 15px; 
+            outline-color: var(--azul-ba);
+        }
+
+        .radio-box { 
+            background: #f9f9f9; 
+            padding: 15px; 
+            border-radius: 6px; 
+            border: 1px solid #eee;
+            margin-bottom: 20px;
+        }
+
+        .btn-gerar { 
+            background-color: var(--azul-ba); 
+            color: white; 
+            border: none; 
+            padding: 18px; 
+            font-size: 16px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            width: 100%; 
+            border-radius: 4px; 
+            text-transform: uppercase;
+            transition: 0.3s;
+        }
+
+        .btn-gerar:hover { background-color: #082a47; }
+
+        /* Lista de Espera */
+        .fila-box { width: 90%; max-width: 800px; margin-top: 30px; margin-bottom: 50px; }
+        .fila-title { color: var(--azul-ba); font-weight: bold; margin-bottom: 10px; border-left: 5px solid var(--vermelho-ba); padding-left: 10px; }
+        
+        .tabela-fila { width: 100%; background: white; border-collapse: collapse; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .tabela-fila th { background: var(--azul-ba); color: white; padding: 12px; text-align: left; font-size: 13px; }
+        .tabela-fila td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+
+        /* Botões de Ação Inferiores */
+        .admin-actions { display: flex; gap: 15px; width: 90%; max-width: 800px; margin-bottom: 40px; }
+        .btn-relatorio { background: #28a745; color: white; border: none; padding: 12px; flex: 1; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-reset { background: var(--vermelho-ba); color: white; border: none; padding: 12px; flex: 1; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Governo do Estado da Bahia</h1>
+    <h2>Coordenação de Provimento e Movimentação</h2>
+    <div class="badge-sec">SEC - TRIAGEM DE ATENDIMENTO</div>
+</header>
+
+<div class="dashboard-stats">
+    <div class="stat-card"><span id="count-total" class="stat-number">0</span><span class="stat-label">Total Atendidos</span></div>
+    <div class="stat-card"><span id="count-efetivo" class="stat-number">0</span><span class="stat-label">Efetivos</span></div>
+    <div class="stat-card"><span id="count-reda" class="stat-number">0</span><span class="stat-label">REDA</span></div>
+    <div class="stat-card"><span id="count-prio" class="stat-number">0</span><span class="stat-label">Prioridades</span></div>
+    <div class="stat-card"><span id="count-interno" class="stat-number">0</span><span class="stat-label">Internos</span></div>
+</div>
+
+<div class="form-container">
+    <div class="field-group" style="margin-bottom: 15px;">
+        <label>Nome do Requerente</label>
+        <input type="text" id="nome" placeholder="Digite o nome completo">
+    </div>
+    
+    <div class="row">
+        <div class="field-group">
+            <label>Matrícula</label>
+            <input type="text" id="matricula" placeholder="00.000.000">
         </div>
-        <button class="btn-acao" onclick="gerarSenha()">Gerar Senha de Atendimento</button>
+        <div class="field-group">
+            <label>Telefone</label>
+            <input type="text" id="telefone" placeholder="(71) 90000-0000">
+        </div>
     </div>
 
-    <div class="fila-box">
-        <div style="font-weight:bold; color:var(--azul-governo); border-left:5px solid var(--vermelho-governo); padding-left:15px; margin-bottom:15px;">Fila em Tempo Real (Nuvem)</div>
-        <div id="fila-display"></div>
+    <div class="field-group" style="margin-bottom: 20px;">
+        <label>Assunto / Tipo de Atendimento</label>
+        <input type="text" id="assunto" placeholder="Ex: Dossiê, Recadastramento">
     </div>
 
-    <div style="width: 100%; max-width: 900px; display: flex; gap: 10px; margin: 20px 0 50px 0;">
-        <button onclick="gerarRelatorio()" style="flex: 1; background: #28a745; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px;">📊 BAIXAR RELATÓRIO DO DIA (EXCEL)</button>
-        <button onclick="limparFilaTotal()" style="flex: 1; background: #d50000; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px;">♻️ ZERAR TUDO (NOVO DIA)</button>
+    <div class="row radio-box">
+        <div class="field-group">
+            <label>Vínculo</label>
+            <div>
+                <input type="radio" name="tipo" value="EFETIVO" checked> Efetivo
+                <input type="radio" name="tipo" value="REDA"> REDA
+                <input type="radio" name="tipo" value="INTERNO"> Int.
+            </div>
+        </div>
+        <div class="field-group">
+            <label>Prioritário?</label>
+            <div>
+                <input type="radio" name="prio" value="SIM"> Sim
+                <input type="radio" name="prio" value="NAO" checked> Não
+            </div>
+        </div>
     </div>
 
-    <script>
-        const firebaseConfig = { databaseURL: "https://sistemacpm-dd706-default-rtdb.firebaseio.com/" };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+    <button class="btn-gerar" onclick="gerarSenha()">Gerar Senha de Atendimento</button>
+</div>
 
-        // LÓGICA DE ATUALIZAÇÃO DA FILA E CONTADORES
-        db.ref('atendimentos').on('value', snap => {
-            let html = '<div class="fila-item header-fila"><span>Senha</span><span>Nome</span><span>Assunto</span><span>Hora</span></div>';
-            let contAtivos = 0;
-            
-            // Variáveis de estatística
-            let stats = { total: 0, efetivo: 0, reda: 0, prio: 0, interno: 0 };
+<div class="fila-box">
+    <div class="fila-title">Fila em Tempo Real (Nuvem)</div>
+    <table class="tabela-fila">
+        <thead>
+            <tr>
+                <th>Senha</th>
+                <th>Nome</th>
+                <th>Assunto</th>
+                <th>Hora</th>
+            </tr>
+        </thead>
+        <tbody id="fila-corpo">
+            </tbody>
+    </table>
+</div>
 
-            snap.forEach(c => {
-                const p = c.val();
-                
-                // Se o status for ATENDIDO ou CHAMADO, conta nas estatísticas
-                if(p.status !== "AGUARDANDO") {
-                    stats.total++;
-                    if(p.prioridade) stats.prio++;
-                    if(p.tipo === "EFETIVO") stats.efetivo++;
-                    if(p.tipo === "REDA") stats.reda++;
-                    if(p.tipo === "INTERNO") stats.interno++;
-                }
+<div class="admin-actions">
+    <button class="btn-relatorio" onclick="gerarRelatorio()">📄 Baixar Relatório (Excel)</button>
+    <button class="btn-reset" onclick="limparFilaTotal()">♻️ Zerar Sistema (Novo Dia)</button>
+</div>
 
-                // Se estiver AGUARDANDO, mostra na lista visual
-                if(p.status === "AGUARDANDO") {
-                    html += `<div class="fila-item"><b class="${p.prioridade ? 'senha-prio' : ''}">${p.senha}</b><span>${p.nome}</span><span>${p.assunto}</span><span>${p.hora}</span></div>`;
-                    contAtivos++;
-                }
-            });
+<script>
+    const firebaseConfig = { databaseURL: "https://sistemacpm-dd706-default-rtdb.firebaseio.com/" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-            // Atualiza Dashboard
-            document.getElementById('count-total').innerText = stats.total;
-            document.getElementById('count-efetivo').innerText = stats.efetivo;
-            document.getElementById('count-reda').innerText = stats.reda;
-            document.getElementById('count-prio').innerText = stats.prio;
-            document.getElementById('count-interno').innerText = stats.interno;
+    // Sincronização e Estatísticas
+    db.ref('atendimentos').on('value', snap => {
+        let html = '';
+        let stats = { total: 0, efetivo: 0, reda: 0, prio: 0, interno: 0 };
 
-            document.getElementById('fila-display').innerHTML = contAtivos > 0 ? html : "Ninguém aguardando na fila.";
+        snap.forEach(child => {
+            const p = child.val();
+            if(p.status !== "AGUARDANDO") {
+                stats.total++;
+                if(p.prioridade) stats.prio++;
+                if(p.tipo === "EFETIVO") stats.efetivo++;
+                if(p.tipo === "REDA") stats.reda++;
+                if(p.tipo === "INTERNO") stats.interno++;
+            } else {
+                html += `<tr>
+                    <td><b style="color:var(--vermelho-ba)">${p.senha}</b></td>
+                    <td>${p.nome}</td>
+                    <td>${p.assunto}</td>
+                    <td>${p.hora}</td>
+                </tr>`;
+            }
         });
 
-        function gerarSenha() {
-            const nome = document.getElementById('nome').value.trim().toUpperCase();
-            if(!nome) return alert("Informe o nome!");
-            const tipo = document.querySelector('input[name="tipo"]:checked').value;
-            const ehPrio = document.querySelector('input[name="prio"]:checked').value === "SIM";
+        document.getElementById('count-total').innerText = stats.total;
+        document.getElementById('count-efetivo').innerText = stats.efetivo;
+        document.getElementById('count-reda').innerText = stats.reda;
+        document.getElementById('count-prio').innerText = stats.prio;
+        document.getElementById('count-interno').innerText = stats.interno;
+        document.getElementById('fila-corpo').innerHTML = html || '<tr><td colspan="4" style="text-align:center">Ninguém aguardando</td></tr>';
+    });
 
-            db.ref('atendimentos').once('value', snap => {
-                const total = snap.numChildren() + 1;
-                const prefixo = ehPrio ? "P" : (tipo === "INTERNO" ? "I" : tipo[0]);
-                const senha = prefixo + String(total).padStart(3, '0');
+    function gerarSenha() {
+        const nome = document.getElementById('nome').value.toUpperCase();
+        if(!nome) return alert("Nome obrigatório");
+        const tipo = document.querySelector('input[name="tipo"]:checked').value;
+        const ehPrio = document.querySelector('input[name="prio"]:checked').value === "SIM";
 
-                db.ref('atendimentos').push({
-                    senha, nome, tipo, prioridade: ehPrio,
-                    matricula: document.getElementById('matricula').value || "---",
-                    assunto: document.getElementById('assunto').value.toUpperCase() || "GERAL",
-                    status: "AGUARDANDO", timestamp: Date.now(),
-                    hora: new Date().toLocaleTimeString()
-                });
-                document.getElementById('nome').value = "";
-                document.getElementById('nome').focus();
+        db.ref('atendimentos').once('value', snap => {
+            const num = snap.numChildren() + 1;
+            const pref = ehPrio ? "P" : (tipo === "INTERNO" ? "I" : tipo[0]);
+            const senha = pref + String(num).padStart(3, '0');
+
+            db.ref('atendimentos').push({
+                senha, nome, tipo, prioridade: ehPrio,
+                matricula: document.getElementById('matricula').value || "---",
+                assunto: document.getElementById('assunto').value.toUpperCase() || "GERAL",
+                status: "AGUARDANDO", timestamp: Date.now(),
+                hora: new Date().toLocaleTimeString()
             });
-        }
 
-        function gerarRelatorio() {
-            db.ref('atendimentos').once('value', snap => {
-                let csv = "Senha;Nome;Matricula;Assunto;Tipo;Prioridade;Status;Hora Chamado\n";
-                snap.forEach(child => {
-                    const d = child.val();
-                    csv += `${d.senha};${d.nome};${d.matricula};${d.assunto};${d.tipo};${d.prioridade ? 'SIM' : 'NAO'};${d.status};${d.hora}\n`;
-                });
-                const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.setAttribute("href", url);
-                link.setAttribute("download", `Relatorio_CPM_${new Date().toLocaleDateString().replace(/\//g, '-')}.csv`);
-                link.click();
+            document.getElementById('nome').value = "";
+            document.getElementById('nome').focus();
+        });
+    }
+
+    function gerarRelatorio() {
+        db.ref('atendimentos').once('value', snap => {
+            let csv = "Senha;Nome;Matricula;Assunto;Tipo;Prioridade;Status;Hora\n";
+            snap.forEach(c => {
+                const d = c.val();
+                csv += `${d.senha};${d.nome};${d.matricula};${d.assunto};${d.tipo};${d.prioridade ? 'SIM' : 'NAO'};${d.status};${d.hora}\n`;
             });
-        }
+            const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `Relatorio_CPM_${new Date().toLocaleDateString().replace(/\//g, '-')}.csv`;
+            link.click();
+        });
+    }
 
-        function limparFilaTotal() {
-            if (confirm("⚠️ Isso apagará TODOS os dados de hoje. Confirmar reset para novo dia?")) {
-                const pass = prompt("Senha de Administrador:");
-                if (pass === "123") {
-                    db.ref('atendimentos').remove();
-                    db.ref('senha_atual').remove();
-                    alert("Sistema reiniciado!");
-                }
+    function limparFilaTotal() {
+        if(confirm("Deseja zerar todos os dados para um novo dia?")) {
+            const p = prompt("Senha Admin:");
+            if(p === "123") {
+                db.ref('atendimentos').remove();
+                db.ref('senha_atual').remove();
             }
         }
-    </script>
+    }
+</script>
+
 </body>
+</html>
