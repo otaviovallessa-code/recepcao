@@ -2,40 +2,57 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>CPM - Triagem Online</title>
+    <title>CPM - Triagem Governamental Online</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        :root { --azul: #0b3c66; --vermelho: #d50000; }
-        body { background: var(--azul); color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; }
-        header { width: 100%; padding: 20px 0; border-bottom: 4px solid var(--vermelho); text-align: center; }
-        .container { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; color: #333; margin-top: 20px; }
-        .field { display: flex; flex-direction: column; margin-bottom: 15px; }
-        input, select { padding: 12px; border: 2px solid #ddd; border-radius: 6px; }
-        .btn { background: #28a745; color: white; border: none; padding: 15px; width: 100%; font-weight: bold; cursor: pointer; border-radius: 6px; }
-        .fila { width: 90%; max-width: 800px; background: white; color: #333; margin-top: 20px; padding: 15px; border-radius: 10px; }
-        .item { display: grid; grid-template-columns: 80px 1fr 1fr; border-bottom: 1px solid #eee; padding: 10px; }
+        :root { --azul: #0b3c66; --vermelho: #d50000; --laranja: #e67e22; --branco: #ffffff; }
+        body { background-color: var(--azul); color: var(--branco); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        header { width: 100%; padding: 20px 0; border-bottom: 4px solid var(--vermelho); text-align: center; margin-bottom: 30px; }
+        .badge-sec { background: var(--vermelho); padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+        .form-container { background: var(--branco); padding: 30px; border-radius: 15px; width: 90%; max-width: 600px; color: #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .field-group { display: flex; flex-direction: column; margin-bottom: 15px; }
+        label { font-size: 11px; font-weight: 700; color: var(--azul); text-transform: uppercase; }
+        input[type="text"] { padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; margin-top: 5px; }
+        .radio-section { display: flex; gap: 10px; margin: 15px 0; }
+        .radio-group { flex: 1; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee; }
+        .btn-acao { background: #28a745; color: white; border: none; padding: 18px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; border-radius: 8px; text-transform: uppercase; }
+        .fila-box { background: var(--branco); color: #333; width: 90%; max-width: 850px; margin-top: 30px; padding: 20px; border-radius: 12px; }
+        .fila-item { display: grid; grid-template-columns: 80px 1fr 1fr 80px; border-bottom: 1px solid #eee; padding: 10px; font-size: 14px; }
+        .header-fila { font-weight: bold; background: #f1f4f7; border-bottom: 2px solid var(--azul); }
     </style>
 </head>
 <body>
-    <header><h1>TRIAGEM ONLINE - CPM</h1></header>
-    <div class="container">
-        <div class="field"><label>NOME</label><input type="text" id="nome"></div>
-        <div class="field"><label>VÍNCULO</label>
-            <select id="tipo">
-                <option value="EFETIVO">EFETIVO</option>
-                <option value="REDA">REDA</option>
-                <option value="INTERNO">INTERNO</option>
-            </select>
+    <header>
+        <h1>GOVERNO DO ESTADO DA BAHIA</h1>
+        <h2>COORDENAÇÃO DE PROVIMENTO E MOVIMENTAÇÃO</h2>
+        <div class="badge-sec">SEC - TRIAGEM ONLINE</div>
+    </header>
+
+    <div class="form-container">
+        <div class="field-group"><label>Nome do Requerente</label><input type="text" id="nome"></div>
+        <div style="display:flex; gap:10px;">
+            <div class="field-group" style="flex:1"><label>Matrícula</label><input type="text" id="matricula"></div>
+            <div class="field-group" style="flex:1"><label>Telefone</label><input type="text" id="telefone"></div>
         </div>
-        <div class="field"><label>PRIORIDADE?</label>
-            <select id="prioridade"><option value="NAO">NÃO</option><option value="SIM">SIM</option></select>
+        <div class="field-group"><label>Assunto</label><input type="text" id="assunto"></div>
+        
+        <div class="radio-section">
+            <div class="radio-group"><label>Vínculo</label><br>
+                <input type="radio" name="tipo" value="EFETIVO" checked> EFETIVO 
+                <input type="radio" name="tipo" value="REDA"> REDA
+            </div>
+            <div class="radio-group"><label>Prioridade?</label><br>
+                <input type="radio" name="prio" value="SIM"> SIM 
+                <input type="radio" name="prio" value="NAO" checked> NÃO
+            </div>
         </div>
-        <button class="btn" onclick="gerarSenha()">GERAR SENHA</button>
+        <button class="btn-acao" onclick="gerarSenha()">Gerar Senha Online</button>
     </div>
-    <div class="fila">
-        <h4>FILA DE ESPERA</h4>
-        <div id="lista-espera"></div>
+
+    <div class="fila-box">
+        <h3 style="color:var(--azul)">Fila de Espera em Tempo Real</h3>
+        <div id="fila-espera"></div>
     </div>
 
     <script>
@@ -45,14 +62,18 @@
 
         function gerarSenha() {
             const nome = document.getElementById('nome').value.toUpperCase();
-            const tipo = document.getElementById('tipo').value;
-            const ehPrio = document.getElementById('prioridade').value === "SIM";
-            if(!nome) return alert("Informe o nome!");
+            if(!nome) return alert("Nome obrigatório!");
+            const tipo = document.querySelector('input[name="tipo"]:checked').value;
+            const ehPrio = document.querySelector('input[name="prio"]:checked').value === "SIM";
 
             db.ref('atendimentos').once('value', snap => {
-                const senha = (ehPrio ? "P" : tipo[0]) + String(snap.numChildren() + 1).padStart(3, '0');
+                const num = snap.numChildren() + 1;
+                const senha = (ehPrio ? "P" : tipo[0]) + String(num).padStart(3, '0');
+                
                 db.ref('atendimentos').push({
                     senha, nome, tipo, prioridade: ehPrio,
+                    matricula: document.getElementById('matricula').value || "---",
+                    assunto: document.getElementById('assunto').value.toUpperCase() || "GERAL",
                     status: "AGUARDANDO", timestamp: Date.now()
                 });
                 document.getElementById('nome').value = "";
@@ -60,12 +81,13 @@
         }
 
         db.ref('atendimentos').on('value', snap => {
-            let html = "";
-            snap.forEach(child => {
-                const p = child.val();
-                if(p.status === "AGUARDANDO") html += `<div class="item"><b>${p.senha}</b><span>${p.nome}</span><span>${p.tipo}</span></div>`;
+            let html = '<div class="fila-item header-fila"><span>Senha</span><span>Nome</span><span>Assunto</span><span>Status</span></div>';
+            snap.forEach(c => {
+                const p = c.val();
+                if(p.status === "AGUARDANDO")
+                    html += `<div class="fila-item"><b>${p.senha}</b><span>${p.nome}</span><span>${p.assunto}</span><span>${p.status}</span></div>`;
             });
-            document.getElementById('lista-espera').innerHTML = html || "Fila vazia";
+            document.getElementById('fila-espera').innerHTML = html;
         });
     </script>
 </body>

@@ -2,52 +2,93 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Atendimento Online - CPM</title>
+    <title>CPM - Triagem Governamental Online</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #f4f7f6; }
-        .box { max-width: 500px; margin: 20px auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .btn-call { background: #d50000; color: white; border: none; padding: 20px; width: 100%; font-size: 20px; font-weight: bold; cursor: pointer; border-radius: 8px; }
-        .item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #ddd; }
+        :root { --azul: #0b3c66; --vermelho: #d50000; --laranja: #e67e22; --branco: #ffffff; }
+        body { background-color: var(--azul); color: var(--branco); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        header { width: 100%; padding: 20px 0; border-bottom: 4px solid var(--vermelho); text-align: center; margin-bottom: 30px; }
+        .badge-sec { background: var(--vermelho); padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+        .form-container { background: var(--branco); padding: 30px; border-radius: 15px; width: 90%; max-width: 600px; color: #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .field-group { display: flex; flex-direction: column; margin-bottom: 15px; }
+        label { font-size: 11px; font-weight: 700; color: var(--azul); text-transform: uppercase; }
+        input[type="text"] { padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; margin-top: 5px; }
+        .radio-section { display: flex; gap: 10px; margin: 15px 0; }
+        .radio-group { flex: 1; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee; }
+        .btn-acao { background: #28a745; color: white; border: none; padding: 18px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; border-radius: 8px; text-transform: uppercase; }
+        .fila-box { background: var(--branco); color: #333; width: 90%; max-width: 850px; margin-top: 30px; padding: 20px; border-radius: 12px; }
+        .fila-item { display: grid; grid-template-columns: 80px 1fr 1fr 80px; border-bottom: 1px solid #eee; padding: 10px; font-size: 14px; }
+        .header-fila { font-weight: bold; background: #f1f4f7; border-bottom: 2px solid var(--azul); }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h2>ATENDIMENTO</h2>
-        <div style="font-size: 20px; margin-bottom: 15px;">Próximo: <b id="prox">--</b></div>
-        <button class="btn-call" onclick="chamar()">CHAMAR PRÓXIMO</button>
-        <hr>
-        <h3>LISTA DE ESPERA</h3>
-        <div id="lista"></div>
-        <button onclick="if(confirm('Limpar tudo?')) firebase.database().ref().remove()" style="margin-top:30px; opacity:0.3">Resetar Dia</button>
+    <header>
+        <h1>GOVERNO DO ESTADO DA BAHIA</h1>
+        <h2>COORDENAÇÃO DE PROVIMENTO E MOVIMENTAÇÃO</h2>
+        <div class="badge-sec">SEC - TRIAGEM ONLINE</div>
+    </header>
+
+    <div class="form-container">
+        <div class="field-group"><label>Nome do Requerente</label><input type="text" id="nome"></div>
+        <div style="display:flex; gap:10px;">
+            <div class="field-group" style="flex:1"><label>Matrícula</label><input type="text" id="matricula"></div>
+            <div class="field-group" style="flex:1"><label>Telefone</label><input type="text" id="telefone"></div>
+        </div>
+        <div class="field-group"><label>Assunto</label><input type="text" id="assunto"></div>
+        
+        <div class="radio-section">
+            <div class="radio-group"><label>Vínculo</label><br>
+                <input type="radio" name="tipo" value="EFETIVO" checked> EFETIVO 
+                <input type="radio" name="tipo" value="REDA"> REDA
+            </div>
+            <div class="radio-group"><label>Prioridade?</label><br>
+                <input type="radio" name="prio" value="SIM"> SIM 
+                <input type="radio" name="prio" value="NAO" checked> NÃO
+            </div>
+        </div>
+        <button class="btn-acao" onclick="gerarSenha()">Gerar Senha Online</button>
+    </div>
+
+    <div class="fila-box">
+        <h3 style="color:var(--azul)">Fila de Espera em Tempo Real</h3>
+        <div id="fila-espera"></div>
     </div>
 
     <script>
         const firebaseConfig = { databaseURL: "https://sistemacpm-dd706-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        let fila = [];
+
+        function gerarSenha() {
+            const nome = document.getElementById('nome').value.toUpperCase();
+            if(!nome) return alert("Nome obrigatório!");
+            const tipo = document.querySelector('input[name="tipo"]:checked').value;
+            const ehPrio = document.querySelector('input[name="prio"]:checked').value === "SIM";
+
+            db.ref('atendimentos').once('value', snap => {
+                const num = snap.numChildren() + 1;
+                const senha = (ehPrio ? "P" : tipo[0]) + String(num).padStart(3, '0');
+                
+                db.ref('atendimentos').push({
+                    senha, nome, tipo, prioridade: ehPrio,
+                    matricula: document.getElementById('matricula').value || "---",
+                    assunto: document.getElementById('assunto').value.toUpperCase() || "GERAL",
+                    status: "AGUARDANDO", timestamp: Date.now()
+                });
+                document.getElementById('nome').value = "";
+            });
+        }
 
         db.ref('atendimentos').on('value', snap => {
-            fila = [];
-            snap.forEach(child => {
-                const item = child.val(); item.key = child.key;
-                if(item.status === "AGUARDANDO") fila.push(item);
+            let html = '<div class="fila-item header-fila"><span>Senha</span><span>Nome</span><span>Assunto</span><span>Status</span></div>';
+            snap.forEach(c => {
+                const p = c.val();
+                if(p.status === "AGUARDANDO")
+                    html += `<div class="fila-item"><b>${p.senha}</b><span>${p.nome}</span><span>${p.assunto}</span><span>${p.status}</span></div>`;
             });
-            fila.sort((a,b) => (a.prioridade === b.prioridade) ? a.timestamp - b.timestamp : (a.prioridade ? -1 : 1));
-            document.getElementById('prox').innerText = fila.length > 0 ? fila[0].senha : "--";
-            let html = "";
-            fila.forEach(f => html += `<div class="item"><span>${f.senha}</span><span>${f.nome}</span></div>`);
-            document.getElementById('lista').innerHTML = html;
+            document.getElementById('fila-espera').innerHTML = html;
         });
-
-        function chamar() {
-            if(fila.length === 0) return alert("Fila vazia!");
-            const sel = fila[0];
-            db.ref('atendimentos/' + sel.key).update({ status: "ATENDIDO" });
-            db.ref('senha_atual').set({ senha: sel.senha, nome: sel.nome, timestamp: Date.now() });
-        }
     </script>
 </body>
 </html>
