@@ -2,45 +2,57 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>SEC - Atendimento CPM (Chamada)</title>
+    <title>CPM - Painel de Chamada</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        body { background-color: #0b3c66; color: white; font-family: Arial, sans-serif; text-align: center; padding: 20px; margin: 0; }
-        .container { background: rgba(255, 255, 255, 0.1); padding: 25px; border-radius: 12px; width: 550px; margin: 0 auto; border: 1px solid rgba(255,255,255,0.2); }
-        .status-grande { font-size: 45px; color: #ff0000; font-weight: bold; margin: 20px 0; min-height: 60px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
-        .btn-acao { background-color: #d50000; color: white; border: none; padding: 18px; font-size: 20px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; border-radius: 6px; text-transform: uppercase; transition: 0.3s; }
-        .btn-interno { background-color: #0056b3; margin-top: 10px; }
-        .btn-acao:hover { transform: scale(1.02); filter: brightness(1.2); }
+        :root { --azul: #0b3c66; --vermelho: #d50000; --verde: #28a745; --branco: #ffffff; }
+        body { background: #f0f2f5; font-family: Arial; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         
-        /* ALERTA DE PRIORIDADE PISCANTE */
-        #alerta-prioridade { 
-            background: #ffc107; color: #000; padding: 15px; border-radius: 8px; font-weight: bold; 
-            margin-bottom: 20px; display: none; animation: piscar 1s infinite; 
-        }
-        @keyframes piscar { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        /* Dashboard no Topo da Chamada */
+        .dashboard { display: flex; gap: 10px; width: 100%; max-width: 900px; margin-bottom: 20px; }
+        .card { background: white; flex: 1; padding: 15px; border-radius: 8px; text-align: center; border-top: 4px solid var(--azul); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .card b { font-size: 24px; color: var(--vermelho); display: block; }
+        .card span { font-size: 10px; text-transform: uppercase; font-weight: bold; color: #666; }
 
-        .fila-box { background: white; color: #333; width: 95%; max-width: 800px; margin: 30px auto; padding: 15px; border-radius: 8px; text-align: left; }
-        .badge-turno { display: block; margin-top: 15px; font-size: 13px; opacity: 0.8; font-style: italic; }
+        .controle-chamada { background: white; padding: 30px; border-radius: 12px; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .senha-atual { font-size: 60px; font-weight: bold; color: var(--azul); margin: 20px 0; }
+        
+        .btn { border: none; padding: 15px; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 10px; font-size: 16px; }
+        .btn-proximo { background: var(--vermelho); }
+        .btn-interno { background: var(--azul); }
+        
+        .alerta-prio { background: #ffeb3b; color: #000; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-weight: bold; display: none; animation: blink 1s infinite; }
+        @keyframes blink { 0% {opacity: 1} 50% {opacity: 0.5} 100% {opacity: 1} }
+
+        .admin-box { margin-top: 20px; display: flex; gap: 10px; width: 100%; max-width: 500px; }
+        .btn-sm { flex: 1; padding: 10px; font-size: 12px; border: none; border-radius: 4px; color: white; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
-    <h1>GOVERNO DO ESTADO DA BAHIA</h1>
-    <h2>SEC - ATENDIMENTO CPM (CHAMADA ONLINE)</h2>
 
-    <div class="container">
-        <div id="alerta-prioridade">⚠️ ATENÇÃO: EXISTE PRIORIDADE NA FILA!</div>
-        <div id="display-chamada" class="status-grande">AGUARDANDO...</div>
-        
-        <button class="btn-acao" onclick="chamarAlternado()">CHAMAR PRÓXIMO (EFETIVO/REDA)</button>
-        <button class="btn-acao btn-interno" onclick="chamarInterno()">CHAMAR INTERNO</button>
-        
-        <span id="txt-turno" class="badge-turno">Turno: EFETIVO</span>
+    <div class="dashboard">
+        <div class="card"><b id="st-total">0</b><span>Atendidos</span></div>
+        <div class="card"><b id="st-efe">0</b><span>Efetivo</span></div>
+        <div class="card"><b id="st-reda">0</b><span>REDA</span></div>
+        <div class="card"><b id="st-prio">0</b><span>Prioridade</span></div>
+        <div class="card"><b id="st-int">0</b><span>Interno</span></div>
     </div>
 
-    <div class="fila-box">
-        <h3 style="color:#0b3c66; margin-top:0">Fila de Espera:</h3>
-        <div id="lista-fila"></div>
+    <div class="controle-chamada">
+        <div id="aviso-prio" class="alerta-prio">⚠️ PRIORIDADE NA FILA!</div>
+        <div style="color: #666; font-size: 14px;">ÚLTIMA CHAMADA:</div>
+        <div id="display-senha" class="senha-atual">---</div>
+        <div id="display-nome" style="font-size: 20px; margin-bottom: 25px;">Aguardando...</div>
+        
+        <button class="btn btn-proximo" onclick="chamarProximo()">CHAMAR PRÓXIMO (EFETIVO/REDA)</button>
+        <button class="btn btn-interno" onclick="chamarInterno()">CHAMAR INTERNO</button>
+        <div id="turno-txt" style="font-size: 12px; color: #999; margin-top: 5px;">Turno Atual: EFETIVO</div>
+    </div>
+
+    <div class="admin-box">
+        <button class="btn-sm" style="background: var(--verde);" onclick="baixarRelatorio()">📊 RELATÓRIO</button>
+        <button class="btn-sm" style="background: #666;" onclick="resetarDia()">♻️ ZERAR DIA</button>
     </div>
 
     <script>
@@ -49,68 +61,92 @@
         const db = firebase.database();
 
         let fila = [];
-        let proximoEhEfetivo = true;
+        let proximoEfetivo = true;
 
         db.ref('atendimentos').on('value', snap => {
             fila = [];
+            let stats = { t:0, e:0, r:0, p:0, i:0 };
+
             snap.forEach(c => {
-                const item = c.val(); item.key = c.key;
-                if(item.status === "AGUARDANDO") fila.push(item);
+                const v = c.val(); v.key = c.key;
+                if(v.status === "AGUARDANDO") {
+                    fila.push(v);
+                } else {
+                    stats.t++;
+                    if(v.prioridade) stats.p++;
+                    if(v.tipo === "EFETIVO") stats.e++;
+                    if(v.tipo === "REDA") stats.r++;
+                    if(v.tipo === "INTERNO") stats.i++;
+                }
             });
 
-            // Verifica se há prioridade para mostrar o alerta
-            const temPrio = fila.some(i => i.prioridade);
-            document.getElementById('alerta-prioridade').style.display = temPrio ? 'block' : 'none';
-
-            // Atualiza lista visual
-            let h = "";
-            fila.forEach(f => h += `<div><b>${f.senha}</b> - ${f.nome} (${f.tipo})</div>`);
-            document.getElementById('lista-fila').innerHTML = h || "Fila vazia.";
+            // Atualiza Dashboard
+            document.getElementById('st-total').innerText = stats.t;
+            document.getElementById('st-efe').innerText = stats.e;
+            document.getElementById('st-reda').innerText = stats.r;
+            document.getElementById('st-prio').innerText = stats.p;
+            document.getElementById('st-int').innerText = stats.i;
+            
+            // Alerta Prioridade
+            document.getElementById('aviso-prio').style.display = fila.some(x => x.prioridade) ? 'block' : 'none';
         });
 
-        function chamarAlternado() {
-            if (fila.length === 0) return alert("Ninguém na fila!");
-
-            // 1. PRIORIDADE SEMPRE PRIMEIRO
-            const prios = fila.filter(i => i.prioridade).sort((a,b) => a.timestamp - b.timestamp);
-            let escolhido = null;
-
-            if (prios.length > 0) {
-                escolhido = prios[0];
+        function chamarProximo() {
+            if(fila.length === 0) return alert("Fila vazia");
+            
+            let alvo = null;
+            const prios = fila.filter(x => x.prioridade);
+            
+            if(prios.length > 0) {
+                alvo = prios[0];
             } else {
-                // 2. ALTERNÂNCIA EFETIVO / REDA
-                const efetivos = fila.filter(i => i.tipo === "EFETIVO").sort((a,b) => a.timestamp - b.timestamp);
-                const redas = fila.filter(i => i.tipo === "REDA").sort((a,b) => a.timestamp - b.timestamp);
+                const efes = fila.filter(x => x.tipo === "EFETIVO");
+                const redas = fila.filter(x => x.tipo === "REDA");
 
-                if (proximoEhEfetivo) {
-                    escolhido = efetivos[0] || redas[0];
+                if(proximoEfetivo) {
+                    alvo = efes[0] || redas[0];
                 } else {
-                    escolhido = redas[0] || efetivos[0];
+                    alvo = redas[0] || efes[0];
                 }
-
-                // Só alterna se ambos existirem, para não pular vez injustamente
-                if (efetivos.length > 0 && redas.length > 0) {
-                    proximoEhEfetivo = !proximoEhEfetivo;
-                    document.getElementById('txt-turno').innerText = "Turno: " + (proximoEhEfetivo ? "EFETIVO" : "REDA");
+                
+                if(efes.length > 0 && redas.length > 0) {
+                    proximoEfetivo = !proximoEfetivo;
+                    document.getElementById('turno-txt').innerText = "Turno Atual: " + (proximoEfetivo ? "EFETIVO" : "REDA");
                 }
             }
-
-            if (escolhido) dispararChamada(escolhido);
+            if(alvo) efetivarChamada(alvo);
         }
 
         function chamarInterno() {
-            const interno = fila.find(i => i.tipo === "INTERNO");
-            if (interno) dispararChamada(interno);
-            else alert("Nenhum atendimento INTERNO na fila.");
+            const int = fila.find(x => x.tipo === "INTERNO");
+            if(int) efetivarChamada(int);
+            else alert("Nenhum interno na fila");
         }
 
-        function dispararChamada(item) {
-            db.ref('atendimentos/' + item.key).update({ status: "CHAMADO" });
-            db.ref('senha_atual').set({ 
-                senha: item.senha, nome: item.nome, 
-                assunto: item.assunto, timestamp: Date.now() 
+        function efetivarChamada(item) {
+            db.ref('atendimentos/' + item.key).update({ status: "ATENDIDO" });
+            db.ref('senha_atual').set({ senha: item.senha, nome: item.nome, assunto: item.assunto, timestamp: Date.now() });
+            document.getElementById('display-senha').innerText = item.senha;
+            document.getElementById('display-nome').innerText = item.nome;
+        }
+
+        function baixarRelatorio() {
+            db.ref('atendimentos').once('value', snap => {
+                let csv = "\ufeffSenha;Nome;Tipo;Assunto;Status\n";
+                snap.forEach(c => { const d = c.val(); csv += `${d.senha};${d.nome};${d.tipo};${d.assunto};${d.status}\n`; });
+                const blob = new Blob([csv], {type: 'text/csv'});
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'Relatorio_CPM.csv';
+                a.click();
             });
-            document.getElementById('display-chamada').innerText = item.senha + " - " + item.nome;
+        }
+
+        function resetarDia() {
+            if(confirm("Zerar todos os atendimentos?") && prompt("Senha:") === "123") {
+                db.ref('atendimentos').remove();
+                db.ref('senha_atual').remove();
+            }
         }
     </script>
 </body>
