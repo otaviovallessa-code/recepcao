@@ -13,10 +13,15 @@
         .senha { font-size: 200px; font-weight: bold; color: #ff0000; margin: 0; line-height: 1; }
         .nome { font-size: 60px; text-transform: uppercase; margin-top: 10px; padding: 0 20px; }
         .historico { background: #092d4d; padding: 20px; overflow: hidden; }
-        .marquee { background: #000; color: #ffeb3b; padding: 15px; font-size: 24px; font-weight: bold; white-space: nowrap; overflow: hidden; border-top: 3px solid #ff0000; }
-        .scroll { display: inline-block; padding-left: 100%; animation: scroll 40s linear infinite; }
+        
+        /* Letreiro Ajustado */
+        .marquee { background: #000; color: #ffeb3b; padding: 15px; font-size: 28px; font-weight: bold; white-space: nowrap; overflow: hidden; border-top: 3px solid #ff0000; }
+        .scroll { display: inline-block; padding-left: 100%; animation: scroll 20s linear infinite; }
         @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+        
         #assunto { font-size: 35px; background: #d50000; padding: 15px 50px; border-radius: 50px; margin-top: 30px; font-weight: bold; text-transform: uppercase; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .hist-item { font-size: 28px; margin-bottom: 20px; border-bottom: 1px solid #1a4a75; padding-bottom: 10px; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -36,7 +41,7 @@
             <div id="lista-hist"></div>
         </div>
     </div>
-    <div class="marquee"><div id="letreiro" class="scroll">Carregando notícias da Educação Bahia...</div></div>
+    <div class="marquee"><div id="letreiro" class="scroll">AGUARDANDO ATUALIZAÇÃO DO LETREIRO...</div></div>
     
     <audio id="som-alerta" preload="auto">
         <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
@@ -48,45 +53,60 @@
         const db = firebase.database();
         let lastTs = 0;
 
+        // 1. Escuta a Senha Atual e Gerencia Histórico
         db.ref('senha_atual').on('value', snap => {
             const d = snap.val();
             if(d && d.timestamp !== lastTs) {
-                // 1. Atualiza a Interface
+                // Atualiza Painel Principal
                 document.getElementById('senha').innerText = d.senha;
                 document.getElementById('nome').innerText = d.nome;
                 document.getElementById('assunto').innerText = d.assunto;
                 
-                // 2. Tocar Som e depois Falar
+                // Tocar Som e Falar
                 const audio = document.getElementById('som-alerta');
                 audio.play().then(() => {
-                    // Espera 1 segundo para o som tocar e então inicia a voz
-                    setTimeout(() => {
-                        falarSenha(d.senha, d.nome, d.assunto);
-                    }, 1200);
-                }).catch(e => console.log("Aguardando interação do usuário para áudio."));
+                    setTimeout(() => falarSenha(d.senha, d.nome, d.assunto), 1200);
+                }).catch(e => console.log("Áudio bloqueado. Clique na tela."));
 
-                // 3. Atualiza Histórico Lateral
-                const item = `<div style="font-size:28px; margin-bottom:20px; border-bottom:1px solid #1a4a75; padding-bottom:10px;">
-                                <b style="color:#ff0000; font-size:35px">${d.senha}</b><br>
-                                <span style="font-size:18px">${d.nome.split(' ')[0]} ${d.nome.split(' ').slice(-1)}</span>
-                              </div>`;
-                const lista = document.getElementById('lista-hist');
-                lista.innerHTML = item + lista.innerHTML;
-                if(lista.children.length > 6) lista.removeChild(lista.lastChild);
-
+                // Atualiza Histórico Sem Duplicar
+                atualizarHistorico(d.senha, d.nome);
                 lastTs = d.timestamp;
             }
         });
 
-        function falarSenha(senha, nome, assunto) {
-            // Cancela falas anteriores para não encavalar
-            window.speechSynthesis.cancel();
+        // 2. Escuta o Letreiro Customizado do ADM
+        db.ref('configuracoes/letreiro').on('value', snap => {
+            const texto = snap.val();
+            if(texto) {
+                document.getElementById('letreiro').innerText = texto.toUpperCase();
+            }
+        });
 
-            const texto = `Senha ${senha.split('').join(' ')}. ${nome}. Assunto: ${assunto}`;
+        function atualizarHistorico(senha, nome) {
+            const lista = document.getElementById('lista-hist');
+            const primeiroNome = nome.split(' ')[0];
+            const ultimoNome = nome.split(' ').length > 1 ? nome.split(' ').slice(-1) : "";
+            
+            const novoItem = document.createElement('div');
+            novoItem.className = 'hist-item';
+            novoItem.innerHTML = `<b style="color:#ff0000; font-size:35px">${senha}</b><br>
+                                  <span style="font-size:20px">${primeiroNome} ${ultimoNome}</span>`;
+            
+            // Insere no topo
+            lista.insertBefore(novoItem, lista.firstChild);
+            
+            // Mantém apenas as últimas 5 para não sobrecarregar a tela
+            if(lista.children.length > 5) {
+                lista.removeChild(lista.lastChild);
+            }
+        }
+
+        function falarSenha(senha, nome, assunto) {
+            window.speechSynthesis.cancel();
+            const texto = `Senha ${senha.split('').join(' ')}. ${nome}.`;
             const msg = new SpeechSynthesisUtterance(texto);
             msg.lang = 'pt-BR';
-            msg.rate = 0.9; // Velocidade um pouco mais lenta para clareza
-            msg.pitch = 1;
+            msg.rate = 0.9;
             window.speechSynthesis.speak(msg);
         }
 
@@ -94,23 +114,12 @@
         setInterval(() => {
             document.getElementById('relogio').innerText = new Date().toLocaleTimeString('pt-br');
         }, 1000);
-        
-        // Notícias RSS
-        async function getNoticias() {
-            try {
-                const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https://www.ba.gov.br/educacao/noticias/rss.xml');
-                const data = await res.json();
-                document.getElementById('letreiro').innerText = data.items.map(i => " ● " + i.title.toUpperCase()).join(' ');
-            } catch { 
-                document.getElementById('letreiro').innerText = "CPM - COORDENAÇÃO DE PROVIMENTO E MOVIMENTAÇÃO - SECRETARIA DA EDUCAÇÃO BAHIA"; 
-            }
-        }
-        getNoticias(); setInterval(getNoticias, 600000);
 
-        // IMPORTANTE: Navegadores bloqueiam som automático. 
-        // Clique em qualquer lugar da tela da TV ao ligar para liberar o áudio.
+        // Clique para liberar som (Exigência dos navegadores)
         document.body.addEventListener('click', () => {
-            console.log("Áudio desbloqueado");
+            console.log("Áudio liberado");
+            const audio = document.getElementById('som-alerta');
+            audio.play().then(() => audio.pause());
         }, {once: true});
     </script>
 </body>
