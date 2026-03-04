@@ -2,66 +2,50 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>CPM - Triagem Governamental</title>
+    <title>CPM - Gerador de Senhas</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        :root { --azul-ba: #0b3c66; --vermelho-ba: #d50000; --cinza: #f4f7f6; --branco: #ffffff; }
-        body { background-color: var(--cinza); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; }
-        header { width: 100%; padding: 20px 0; background: var(--branco); border-bottom: 5px solid var(--vermelho-ba); text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        header h1 { color: var(--azul-ba); margin: 0; font-size: 22px; text-transform: uppercase; }
-        .form-container { background: var(--branco); padding: 30px; border-radius: 8px; width: 90%; max-width: 700px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); margin-top: 30px; }
-        .row { display: flex; gap: 15px; margin-bottom: 15px; }
-        .field-group { flex: 1; display: flex; flex-direction: column; }
-        label { font-size: 11px; font-weight: bold; color: var(--azul-ba); margin-bottom: 5px; text-transform: uppercase; }
-        input[type="text"] { padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; }
-        .radio-box { background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #eee; margin-bottom: 20px; display: flex; gap: 30px; }
-        .btn-gerar { background: var(--azul-ba); color: white; border: none; padding: 18px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; border-radius: 4px; text-transform: uppercase; }
-        .fila-box { width: 90%; max-width: 700px; margin-top: 30px; margin-bottom: 50px; }
-        .tabela-fila { width: 100%; background: white; border-collapse: collapse; border-radius: 8px; overflow: hidden; }
-        .tabela-fila th { background: var(--azul-ba); color: white; padding: 12px; text-align: left; }
-        .tabela-fila td { padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
+        :root { --azul-ba: #0b3c66; --vermelho-ba: #d50000; --branco: #ffffff; }
+        body { background-color: var(--azul-ba); color: var(--branco); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; padding-bottom: 50px; }
+        header { width: 100%; padding: 20px 0; border-bottom: 4px solid var(--vermelho-ba); text-align: center; background: rgba(0,0,0,0.2); }
+        .container { background: var(--branco); padding: 30px; border-radius: 12px; width: 90%; max-width: 600px; color: #333; margin-top: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        label { font-size: 12px; font-weight: bold; color: var(--azul-ba); text-transform: uppercase; display: block; margin-bottom: 5px; }
+        input[type="text"] { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .row { display: flex; gap: 10px; }
+        .btn-gerar { background: var(--vermelho-ba); color: white; border: none; padding: 18px; font-size: 18px; font-weight: bold; width: 100%; border-radius: 6px; cursor: pointer; text-transform: uppercase; margin-top: 10px; }
+        
+        /* Área Admin no Gerador */
+        .admin-section { width: 90%; max-width: 600px; margin-top: 30px; display: flex; gap: 10px; }
+        .btn-admin { flex: 1; padding: 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-relatorio { background: #28a745; }
+        .btn-reset { background: #666; }
     </style>
 </head>
 <body>
     <header>
         <h1>GOVERNO DO ESTADO DA BAHIA</h1>
-        <div style="color:#666">SEC - Coordenação de Provimento e Movimentação</div>
+        <small>SEC - COORDENAÇÃO DE PROVIMENTO E MOVIMENTAÇÃO</small>
     </header>
 
-    <div class="form-container">
-        <div class="field-group" style="margin-bottom:15px">
-            <label>Nome do Requerente</label>
-            <input type="text" id="nome" placeholder="Nome Completo">
-        </div>
+    <div class="container">
+        <label>Nome Completo</label>
+        <input type="text" id="nome" placeholder="Digite o nome">
         <div class="row">
-            <div class="field-group"><label>Matrícula</label><input type="text" id="matricula" placeholder="00.000.000"></div>
-            <div class="field-group"><label>Telefone</label><input type="text" id="telefone" placeholder="(71) 00000-0000"></div>
+            <div style="flex:1"><label>Matrícula</label><input type="text" id="matricula"></div>
+            <div style="flex:1"><label>Assunto</label><input type="text" id="assunto"></div>
         </div>
-        <div class="field-group" style="margin-bottom:20px">
-            <label>Assunto</label>
-            <input type="text" id="assunto" placeholder="Ex: Recadastramento">
+        <div style="margin: 10px 0; font-size: 14px;">
+            <input type="radio" name="tipo" value="EFETIVO" checked> EFETIVO 
+            <input type="radio" name="tipo" value="REDA"> REDA |
+            <input type="checkbox" id="prio"> <b>PRIORITÁRIO</b>
         </div>
-        <div class="radio-box">
-            <div><label>Vínculo</label><br>
-                <input type="radio" name="tipo" value="EFETIVO" checked> Efetivo 
-                <input type="radio" name="tipo" value="REDA"> REDA
-                <input type="radio" name="tipo" value="INTERNO"> Int.
-            </div>
-            <div><label>Prioritário?</label><br>
-                <input type="radio" name="prio" value="SIM"> Sim 
-                <input type="radio" name="prio" value="NAO" checked> Não
-            </div>
-        </div>
-        <button class="btn-gerar" onclick="gerarSenha()">Gerar Senha</button>
+        <button class="btn-gerar" onclick="gerarSenha()">Gerar Senha de Atendimento</button>
     </div>
 
-    <div class="fila-box">
-        <h3 style="color:var(--azul-ba)">Aguardando Atendimento</h3>
-        <table class="tabela-fila">
-            <thead><tr><th>Senha</th><th>Nome</th><th>Assunto</th></tr></thead>
-            <tbody id="fila-corpo"></tbody>
-        </table>
+    <div class="admin-section">
+        <button class="btn-admin btn-relatorio" onclick="exportarRelatorio()">📊 BAIXAR RELATÓRIO DO DIA</button>
+        <button class="btn-admin btn-reset" onclick="resetarSistema()">♻️ ZERAR SISTEMA</button>
     </div>
 
     <script>
@@ -71,34 +55,45 @@
 
         function gerarSenha() {
             const nome = document.getElementById('nome').value.toUpperCase();
-            if(!nome) return alert("Preencha o nome");
+            if(!nome) return alert("Insira o nome");
             const tipo = document.querySelector('input[name="tipo"]:checked').value;
-            const ehPrio = document.querySelector('input[name="prio"]:checked').value === "SIM";
+            const ehPrio = document.getElementById('prio').checked;
 
             db.ref('atendimentos').once('value', snap => {
-                const num = snap.numChildren() + 1;
-                const pref = ehPrio ? "P" : (tipo === "INTERNO" ? "I" : tipo[0]);
-                const senha = pref + String(num).padStart(3, '0');
+                const total = snap.numChildren() + 1;
+                const prefixo = ehPrio ? "P" : (tipo === "INTERNO" ? "I" : tipo[0]);
+                const senha = prefixo + String(total).padStart(3, '0');
+
                 db.ref('atendimentos').push({
                     senha, nome, tipo, prioridade: ehPrio,
-                    matricula: document.getElementById('matricula').value || "---",
                     assunto: document.getElementById('assunto').value.toUpperCase() || "GERAL",
-                    status: "AGUARDANDO", timestamp: Date.now(), hora: new Date().toLocaleTimeString()
+                    matricula: document.getElementById('matricula').value || "---",
+                    status: "AGUARDANDO", hora: new Date().toLocaleTimeString(), timestamp: Date.now()
                 });
                 document.getElementById('nome').value = "";
+                alert("Senha Gerada: " + senha);
             });
         }
 
-        db.ref('atendimentos').on('value', snap => {
-            let html = '';
-            snap.forEach(c => {
-                const p = c.val();
-                if(p.status === "AGUARDANDO") {
-                    html += `<tr><td><b style="color:var(--vermelho-ba)">${p.senha}</b></td><td>${p.nome}</td><td>${p.assunto}</td></tr>`;
-                }
+        function exportarRelatorio() {
+            db.ref('atendimentos').once('value', snap => {
+                let csv = "\ufeffSenha;Nome;Tipo;Assunto;Hora\n";
+                snap.forEach(c => { const d = c.val(); csv += `${d.senha};${d.nome};${d.tipo};${d.assunto};${d.hora}\n`; });
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'Relatorio_Atendimento.csv';
+                a.click();
             });
-            document.getElementById('fila-corpo').innerHTML = html || '<tr><td colspan="3">Fila vazia</td></tr>';
-        });
+        }
+
+        function resetarSistema() {
+            if(confirm("Deseja apagar todos os dados?") && prompt("Senha:") === "123") {
+                db.ref('atendimentos').remove();
+                db.ref('senha_atual').remove();
+                location.reload();
+            }
+        }
     </script>
 </body>
 </html>
