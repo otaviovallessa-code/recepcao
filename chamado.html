@@ -77,7 +77,7 @@
     </div>
 
     <div class="historico-box">
-        <div style="font-weight: bold; margin-bottom: 10px; font-size: 12px; text-transform: uppercase; color: #fff;">🕒 Últimas 3 Chamadas</div>
+        <div style="font-weight: bold; margin-bottom: 10px; font-size: 12px; text-transform: uppercase; color: #fff;">🕒 Últimas 3 Chamadas (Com Hora do Chamado)</div>
         <div id="lista-historico"></div>
     </div>
 
@@ -118,20 +118,21 @@
                 }
             });
 
-            // Atualiza Dashboard e Fila
             document.getElementById('corpo-fila').innerHTML = html || "<tr><td colspan='5' style='text-align:center'>Fila vazia</td></tr>";
             document.getElementById('st-efe').innerText = stats.e;
             document.getElementById('st-reda').innerText = stats.r;
             document.getElementById('st-int').innerText = stats.i;
             document.getElementById('st-prio').innerText = stats.p;
 
-            // Atualiza Histórico (Últimos 3 atendidos, excluindo o atual)
+            // Ordena pelo timestamp mais recente para o histórico
             historico.sort((a,b) => b.timestamp - a.timestamp);
+            
             let histHtml = "";
-            historico.slice(1, 4).forEach(h => {
+            // Pega as últimas 3 chamadas (excluindo a que está no painel amarelo se desejar, ou apenas listando as 3 últimas)
+            historico.slice(0, 3).forEach(h => {
                 histHtml += `<div class="hist-item">
                     <span><b>${h.senha}</b> - ${h.nome} (${h.assunto || "GERAL"})</span>
-                    <span>${h.hora}</span>
+                    <span style="color:#2ecc71">Chamado às: ${h.hora_chamado || h.hora}</span>
                 </div>`;
             });
             document.getElementById('lista-historico').innerHTML = histHtml || "Nenhum histórico ainda.";
@@ -148,7 +149,16 @@
         });
 
         function efetivar(alvo) {
-            db.ref('atendimentos/' + alvo.key).update({ status: "CHAMADO" });
+            const horaChamado = new Date().toLocaleTimeString('pt-br');
+            
+            // Grava o status e a hora do chamado no banco
+            db.ref('atendimentos/' + alvo.key).update({ 
+                status: "CHAMADO",
+                hora_chamado: horaChamado,
+                timestamp: Date.now() // Atualiza o timestamp para o histórico ordenar corretamente
+            });
+
+            // Envia para o painel da TV
             db.ref('senha_atual').set({ 
                 senha: alvo.senha, 
                 nome: alvo.nome, 
